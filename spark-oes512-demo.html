@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spark OES-512 BioSignal Explorer</title>
+<!-- Independent research prototype by Spark AI NLP (Jean-François Brisson, https://sparkainlpx.xyz).
+     Self-contained: no CDN, no external fonts, no network. Synthetic data only. Not a medical device. -->
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--mut:#8b949e;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--acc:#58a6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#banner{position:sticky;top:0;z-index:9;background:#3d2a00;color:#ffd58a;border-bottom:1px solid #6b4a00;padding:8px 14px;font-weight:600;text-align:center}
+header{padding:12px 16px 0}
+h1{margin:0;font-size:20px}
+h1 small{color:var(--mut);font-weight:400;font-size:13px}
+h2{margin:0 0 8px;font-size:15px;color:var(--acc)}
+main{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:12px;padding:12px 16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label{color:var(--mut)}
+select,input,button{background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+button{cursor:pointer;background:#21262d}button:hover{border-color:var(--acc)}
+button.primary{background:#1f6feb;border-color:#1f6feb}
+#heat{display:grid;grid-template-columns:28px repeat(32,1fr);gap:1px;margin-top:10px}
+#heat .lbl{color:var(--mut);font-size:11px;text-align:right;padding-right:4px;cursor:pointer}
+#heat .c{aspect-ratio:1;border-radius:1px;cursor:pointer}
+#heat .c.nan{background:repeating-linear-gradient(45deg,#555 0 2px,#222 2px 4px)!important}
+#heat .sel{outline:1px solid #fff}
+#bars{display:grid;grid-template-columns:28px 1fr 56px 136px;gap:3px 6px;align-items:center;font-size:12px}
+.bar{position:relative;height:14px;background:#0d1117;border:1px solid var(--line);border-radius:3px;cursor:pointer}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff}
+.tag{font-size:11px;padding:1px 6px;border-radius:9px;text-align:center}
+.t-ok{background:#12361d;color:var(--ok)}.t-alert{background:#4a1414;color:var(--bad)}.t-review{background:#3d2a00;color:var(--warn)}
+#review{display:none;margin-top:10px;padding:10px;border:2px solid var(--warn);border-radius:8px;background:#2a1d00;color:#ffd58a;font-weight:600}
+#explain table{width:100%;border-collapse:collapse;font-size:13px}
+#explain td{padding:3px 4px;border-bottom:1px solid var(--line)}
+#explain td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+#spark{display:flex;gap:10px;align-items:flex-start}
+#spark p{margin:0}
+#spark svg{flex:none}
+#tests{font:12px/1.5 ui-monospace,Consolas,monospace}
+.pass{color:var(--ok)}.fail{color:var(--bad)}
+.mut{color:var(--mut);font-size:12px}
+footer{padding:0 16px 16px;color:var(--mut);font-size:12px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="banner" role="note">Independent research prototype by Spark AI NLP. Uses synthetic data only. Not a medical device. Not for diagnosis, treatment, or clinical decision-making.</div>
+<header><h1>Spark OES-512 BioSignal Explorer <small>· explainable 512-channel monitoring prototype · Spark AI NLP</small></h1></header>
+<main>
+<section>
+  <div class="panel">
+    <div class="controls">
+      <label>Scenario <select id="scenario">
+        <option value="normal">Normal</option><option value="local">Local anomaly (one block)</option>
+        <option value="drift">Drift (slow ramp)</option><option value="global">Global disturbance (all blocks)</option>
+        <option value="missing">Missing data</option></select></label>
+      <label>Seed <input id="seed" type="number" value="42" style="width:90px"></label>
+      <button class="primary" id="run">Run</button>
+      <label>Threshold <input id="thr" type="range" min="0.05" max="1.5" step="0.01" value="0.50"> <span id="thrv">0.50</span> <span class="mut">(default 0.50)</span></label>
+      <button id="reset" title="Reset the alert threshold to its default">Reset to 0.50</button>
+      <button id="export">Export JSON</button>
+      <label style="cursor:pointer"><span style="border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--fg);background:#21262d">Import CSV</span>
+        <input id="csv" type="file" accept=".csv,text/csv,text/plain" hidden></label>
+    </div>
+    <div class="mut" id="source" style="margin-top:6px"></div>
+    <div id="review" role="alert"></div>
+    <div id="heat" aria-label="512-channel heatmap, 16 blocks by 32 channels"></div>
+    <div class="mut" style="margin-top:4px">Heatmap: colour = |x| (dark → bright); hatched = missing (NaN) or rejected value. Click a row to select a block.</div>
+  </div>
+  <div class="panel" style="margin-top:12px">
+    <h2>Block scores S = 0.45·max|x| + 0.35·RMS + 0.20·mean|x|</h2>
+    <div id="bars"></div>
+  </div>
+</section>
+<aside>
+  <div class="panel"><h2>Spark</h2>
+    <div id="spark">
+      <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Spark avatar">
+        <defs><radialGradient id="g" cx="50%" cy="40%"><stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#1f3b73"/></radialGradient></defs>
+        <circle cx="36" cy="36" r="32" fill="url(#g)" stroke="#58a6ff" stroke-width="2"/>
+        <path d="M38 12 L26 38 H35 L31 60 L47 30 H38 Z" fill="#ffd58a" opacity=".9"/>
+        <circle cx="26" cy="30" r="3" fill="#0d1117"/><circle cx="46" cy="30" r="3" fill="#0d1117"/>
+        <path id="mouth" d="M26 46 Q36 52 46 46" stroke="#0d1117" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </svg>
+      <p id="sparktext"></p>
+    </div>
+    <p class="mut" style="margin-top:8px">Rule-based explainer. No AI API, no backend, no network.</p>
+  </div>
+  <div class="panel" style="margin-top:12px" id="explain"><h2>Explainability</h2><div id="exbody"></div></div>
+  <div class="panel" style="margin-top:12px"><h2>Self-test</h2><div id="tests"></div></div>
+</aside>
+</main>
+<footer>Spark OES-512 BioSignal Explorer · Spark AI NLP (Jean-François Brisson) · https://sparkainlpx.xyz · Synthetic data only; not clinically validated.</footer>
+
+<script id="core">
+// ---- Core logic (pure functions; extracted and tested with node) ----
+const N_BLOCKS = 16, BLOCK = 32, N = N_BLOCKS * BLOCK; // 512
+const W_MAX = 0.45, W_RMS = 0.35, W_MEAN = 0.20, DEFAULT_THRESHOLD = 0.50;
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+// Score one block. NaN => missing data => needs human review. ±Infinity => rejected (also human review). Never scored silently.
+function scoreBlock(vals, thr) {
+  const nNaN = vals.filter(v => Number.isNaN(v)).length;
+  const nInf = vals.filter(v => typeof v === 'number' && !Number.isNaN(v) && !Number.isFinite(v)).length;
+  const nBad = vals.filter(v => typeof v !== 'number').length;
+  if (nNaN || nInf || nBad) return { S: null, status: 'review', reason: (nInf || nBad) ? 'rejected' : 'missing', nNaN, nInf: nInf + nBad };
+  let mx = 0, ss = 0, sa = 0;
+  for (const v of vals) { const a = Math.abs(v); if (a > mx) mx = a; ss += v * v; sa += a; }
+  const rms = Math.sqrt(ss / vals.length), mean = sa / vals.length;
+  const cMax = W_MAX * mx, cRms = W_RMS * rms, cMean = W_MEAN * mean, S = cMax + cRms + cMean;
+  return { S, max: mx, rms, mean, cMax, cRms, cMean, status: S >= thr ? 'alert' : 'ok', nNaN: 0, nInf: 0 };
+}
+function scoreFrame(x, thr) {
+  if (!x || x.length !== N) throw new Error('Frame must contain exactly ' + N + ' values (got ' + (x ? x.length : 0) + ')');
+  const out = [];
+  for (let b = 0; b < N_BLOCKS; b++) out.push(Object.assign({ block: b }, scoreBlock(Array.from(x.slice(b * BLOCK, (b + 1) * BLOCK)), thr)));
+  return out;
+}
+function generate(scenario, seed) {
+  const r = mulberry32(seed >>> 0), x = new Array(N), pick = Math.floor(r() * N_BLOCKS);
+  for (let i = 0; i < N; i++) x[i] = 0.08 * gauss(r);
+  if (scenario === 'local') for (let j = 0; j < BLOCK; j++) x[pick * BLOCK + j] += 0.55 * Math.sin(j / 3) + 0.35 * gauss(r);
+  if (scenario === 'drift') for (let i = 0; i < N; i++) x[i] += 0.75 * i / (N - 1);
+  if (scenario === 'global') { const ph = r() * 6.28; for (let i = 0; i < N; i++) x[i] += 0.6 * Math.sin(i / 5 + ph) + 0.15 * gauss(r); }
+  if (scenario === 'missing') { const k = 4 + Math.floor(r() * 8); for (let n = 0; n < k; n++) x[pick * BLOCK + Math.floor(r() * BLOCK)] = NaN; }
+  return { x, pick };
+}
+// CSV: one row or one column of 512 values. Empty / "NaN" => NaN (missing). Unparseable text => rejected.
+function parseCSV(text) {
+  const toks = text.replace(/^\uFEFF/, '').trim().split(/\r?\n|,|;|\t/);
+  const x = toks.map(t => { const s = t.trim(); if (s === '' || /^nan$/i.test(s)) return NaN; const v = Number(s); return Number.isNaN(v) ? Infinity : v; });
+  if (x.length !== N) throw new Error('CSV must contain exactly 512 values in one row or one column (found ' + x.length + ').');
+  return x;
+}
+function explainText(scores, thr) {
+  const rev = scores.filter(s => s.status === 'review'), al = scores.filter(s => s.status === 'alert');
+  const valid = scores.filter(s => s.S !== null), top = valid.slice().sort((a, b) => b.S - a.S)[0];
+  const parts = [];
+  if (rev.length) parts.push(`I can't score ${rev.length} block${rev.length > 1 ? 's' : ''} (${rev.map(s => 'B' + s.block).join(', ')}) because of missing or invalid values, so they need human review. I did not guess those values.`);
+  if (!al.length) parts.push(`No scored block reaches the ${thr.toFixed(2)} threshold${top ? `; the highest is B${top.block} at ${top.S.toFixed(3)}` : ''}. ${rev.length ? 'The scored blocks look quiet.' : 'The frame looks quiet.'}`);
+  else if (al.length === 1) { const a = al[0], d = ['max', 'RMS', 'mean'][[a.cMax, a.cRms, a.cMean].indexOf(Math.max(a.cMax, a.cRms, a.cMean))];
+    parts.push(`One block stands out: B${a.block} scores ${a.S.toFixed(3)} (threshold ${thr.toFixed(2)}), driven mostly by its ${d} term. This looks like a local anomaly.`); }
+  else if (al.length >= 12) parts.push(`${al.length} of 16 blocks are above threshold. That pattern looks like a global disturbance rather than a single local event.`);
+  else { const ids = al.map(s => s.block), contig = ids.every((b, i) => i === 0 || b === ids[i - 1] + 1);
+    parts.push(`${al.length} blocks are above threshold (${ids.map(b => 'B' + b).join(', ')})${contig && ids[ids.length - 1] === 15 ? ', concentrated at the high-index end, consistent with a slow drift' : ''}.`); }
+  parts.push('This is a synthetic-data research demo, not a medical assessment.');
+  return parts.join(' ');
+}
+function selfTests() {
+  const T = [], near = (a, b) => Math.abs(a - b) < 1e-12;
+  T.push(['512 = 16 × 32', N === 512 && N_BLOCKS * BLOCK === 512]);
+  T.push(['All-zero frame lights no block', scoreFrame(new Array(N).fill(0), 0.5).every(s => s.status === 'ok' && s.S === 0)]);
+  const c = scoreBlock(new Array(BLOCK).fill(0.5), 0.5); T.push(['Constant 0.5 block gives S = 0.5', near(c.S, 0.5) && c.status === 'alert']);
+  T.push(['Weights sum to 1.0', near(W_MAX + W_RMS + W_MEAN, 1)]);
+  T.push(['Default threshold is 0.50', DEFAULT_THRESHOLD === 0.5]);
+  const inf = new Array(BLOCK).fill(0); inf[3] = Infinity; const ri = scoreBlock(inf, 0.5);
+  T.push(['Infinity rejected (not scored)', ri.S === null && ri.reason === 'rejected']);
+  const nan = new Array(BLOCK).fill(0); nan[7] = NaN; const rn = scoreBlock(nan, 0.5);
+  T.push(['NaN flagged as missing → human review', rn.S === null && rn.status === 'review' && rn.reason === 'missing']);
+  let threw = false; try { scoreFrame(new Array(511).fill(0), 0.5); } catch (e) { threw = true; } T.push(['Wrong frame length rejected', threw]);
+  T.push(['Seeded generator is deterministic', JSON.stringify(generate('global', 7).x) === JSON.stringify(generate('global', 7).x)]);
+  return T;
+}
+if (typeof module !== 'undefined') module.exports = { N, N_BLOCKS, BLOCK, W_MAX, W_RMS, W_MEAN, DEFAULT_THRESHOLD, scoreBlock, scoreFrame, generate, parseCSV, explainText, selfTests, mulberry32 };
+</script>
+
+<script>
+// ---- UI ----
+const $ = id => document.getElementById(id);
+let frame = null, scores = [], selected = null, source = '';
+const color = v => { const t = Math.min(1, Math.abs(v) / 1.0); return `hsl(${220 - 200 * t},85%,${12 + 50 * t}%)`; };
+const thr = () => parseFloat($('thr').value);
+
+function run() {
+  const sc = $('scenario').value, seed = parseInt($('seed').value, 10) || 0;
+  frame = generate(sc, seed).x; source = `Synthetic scenario "${$('scenario').selectedOptions[0].text}", seed ${seed}`; selected = null; update();
+}
+function update() {
+  $('thrv').textContent = thr().toFixed(2); scores = scoreFrame(frame, thr()); $('source').textContent = 'Source: ' + source;
+  const valid = scores.filter(s => s.S !== null), top = valid.slice().sort((a, b) => b.S - a.S)[0];
+  const rev = scores.filter(s => s.status === 'review'), focus = selected !== null ? scores[selected] : (rev[0] || top);
+  // heatmap
+  const h = $('heat'); h.innerHTML = '';
+  for (let b = 0; b < N_BLOCKS; b++) {
+    const l = document.createElement('div'); l.className = 'lbl'; l.textContent = 'B' + b; l.onclick = () => select(b); h.appendChild(l);
+    for (let j = 0; j < BLOCK; j++) { const v = frame[b * BLOCK + j], d = document.createElement('div');
+      d.className = 'c' + (Number.isFinite(v) ? '' : ' nan') + (focus && focus.block === b ? ' sel' : '');
+      if (Number.isFinite(v)) d.style.background = color(v);
+      d.title = `B${b} ch${j} (#${b * BLOCK + j}): ${Number.isFinite(v) ? v.toFixed(4) : String(v)}`; d.onclick = () => select(b); h.appendChild(d); }
+  }
+  // bars
+  const maxS = Math.max(1, ...valid.map(s => s.S), thr() * 1.1), bars = $('bars'); bars.innerHTML = '';
+  for (const s of scores) {
+    const lab = Object.assign(document.createElement('div'), { textContent: 'B' + s.block }), bar = document.createElement('div'); bar.className = 'bar'; bar.onclick = () => select(s.block);
+    const fill = document.createElement('i'); fill.style.width = (s.S === null ? 100 : 100 * s.S / maxS) + '%';
+    fill.style.background = s.status === 'review' ? 'repeating-linear-gradient(45deg,#6b4a00 0 4px,#2a1d00 4px 8px)' : s.status === 'alert' ? 'var(--bad)' : 'var(--ok)';
+    const tl = document.createElement('b'); tl.style.left = (100 * thr() / maxS) + '%'; bar.append(fill, tl);
+    const val = Object.assign(document.createElement('div'), { textContent: s.S === null ? '—' : s.S.toFixed(3) });
+    const tag = Object.assign(document.createElement('div'), { className: 'tag t-' + s.status, textContent: s.status === 'review' ? 'needs human review' : s.status === 'alert' ? 'ALERT' : 'ok' });
+    if (focus && focus.block === s.block) lab.style.color = '#fff', lab.style.fontWeight = '700';
+    bars.append(lab, bar, val, tag);
+  }
+  // human review warning
+  const rv = $('review');
+  if (rev.length) { rv.style.display = 'block';
+    rv.textContent = `⚠ Human review required: ${rev.length} block(s) contain missing or invalid values (${rev.map(s => `B${s.block}: ${s.nNaN} missing, ${s.nInf} rejected`).join('; ')}). These blocks were NOT scored.`; }
+  else rv.style.display = 'none';
+  // explain panel
+  const e = $('exbody');
+  if (!focus) e.innerHTML = '<p class="mut">No block available.</p>';
+  else if (focus.S === null) e.innerHTML = `<p><b>Block B${focus.block}</b> (channels ${focus.block * 32}–${focus.block * 32 + 31}) — <span class="tag t-review">needs human review</span></p>
+      <p>${focus.nNaN} missing (NaN) and ${focus.nInf} rejected non-finite value(s). Scoring this block would hide the gap, so no score is computed. A person should check the input source.</p>`;
+  else { const t = thr(), why = focus.status === 'alert'
+      ? `S = ${focus.S.toFixed(3)} ≥ threshold ${t.toFixed(2)} (by ${(focus.S - t).toFixed(3)}). Largest contributor: ${['max|x|', 'RMS', 'mean|x|'][[focus.cMax, focus.cRms, focus.cMean].indexOf(Math.max(focus.cMax, focus.cRms, focus.cMean))]}.`
+      : `S = ${focus.S.toFixed(3)} < threshold ${t.toFixed(2)} (margin ${(t - focus.S).toFixed(3)}), so no alert.`;
+    e.innerHTML = `<p><b>Block B${focus.block}</b> (channels ${focus.block * 32}–${focus.block * 32 + 31}) ${selected === null ? '<span class="mut">(auto: top block)</span>' : ''} — <span class="tag t-${focus.status}">${focus.status === 'alert' ? 'ALERT' : 'ok'}</span></p>
+      <table><tr><td>max|x| = ${focus.max.toFixed(4)}</td><td>× 0.45 =</td><td>${focus.cMax.toFixed(4)}</td></tr>
+      <tr><td>RMS = ${focus.rms.toFixed(4)}</td><td>× 0.35 =</td><td>${focus.cRms.toFixed(4)}</td></tr>
+      <tr><td>mean|x| = ${focus.mean.toFixed(4)}</td><td>× 0.20 =</td><td>${focus.cMean.toFixed(4)}</td></tr>
+      <tr><td><b>S</b></td><td></td><td><b>${focus.S.toFixed(4)}</b></td></tr></table><p>${why}</p>`; }
+  // spark
+  $('sparktext').textContent = explainText(scores, thr());
+  $('mouth').setAttribute('d', rev.length ? 'M26 48 H46' : scores.some(s => s.status === 'alert') ? 'M26 50 Q36 43 46 50' : 'M26 46 Q36 52 46 46');
+}
+function select(b) { selected = selected === b ? null : b; update(); }
+function exportJSON() {
+  const data = { tool: 'Spark OES-512 BioSignal Explorer', author: 'Spark AI NLP (Jean-François Brisson)', disclaimer: $('banner').textContent,
+    generated: new Date().toISOString(), settings: { scenario: $('scenario').value, seed: parseInt($('seed').value, 10), threshold: thr(), source,
+      formula: 'S = 0.45*max|x| + 0.35*RMS + 0.20*mean|x|', blocks: N_BLOCKS, channelsPerBlock: BLOCK },
+    scores: scores.map(s => ({ block: s.block, status: s.status, S: s.S, max: s.max ?? null, rms: s.rms ?? null, mean: s.mean ?? null, missing: s.nNaN, rejected: s.nInf })),
+    summary: explainText(scores, thr()) };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = 'spark-oes512-scores.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('run').onclick = run; $('reset').onclick = () => { $('thr').value = DEFAULT_THRESHOLD.toFixed(2); update(); }; $('thr').oninput = update; $('export').onclick = exportJSON;
+$('csv').onchange = ev => { const f = ev.target.files[0]; if (!f) return; f.text().then(t => {
+  try { frame = parseCSV(t); source = 'Imported CSV "' + f.name + '"'; selected = null; update(); } catch (err) { alert(err.message); } ev.target.value = ''; }); };
+$('tests').innerHTML = selfTests().map(([n, ok]) => `<div class="${ok ? 'pass' : 'fail'}">${ok ? '✔ PASS' : '✘ FAIL'} — ${n}</div>`).join('');
+const qs = new URLSearchParams(location.search); if (qs.get('scenario')) $('scenario').value = qs.get('scenario'); if (qs.get('seed')) $('seed').value = qs.get('seed');
+run();
+</script>
+</body>
+</html>

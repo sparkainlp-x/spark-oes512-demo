@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22", "24"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Score contract, self-tests, scenarios, human review, CSV, self-containment, index.html identity (SYNTHETIC)
+        run: node tests/run_tests.js
+      - name: index.html is byte-identical to spark-oes512-demo.html
+        run: cmp spark-oes512-demo.html index.html
+
+  forbidden-terms:
+    name: Forbidden-terms scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Scan every tracked file (fails on a forbidden term)
+        run: python3 tests/forbidden_terms.py
+      - name: The scanner itself fails on planted forbidden terms
+        run: |
+          git config user.email ci@example.invalid && git config user.name ci
+          # the forbidden words are assembled at run time so this workflow file itself stays clean
+          for w in "diag""noses" "clinically ""validated" "NA""SA" "quan""tum" "Goo""gle"; do
+            printf 'This tool %s\n' "$w" > planted.txt && git add planted.txt
+            if python3 tests/forbidden_terms.py > /dev/null; then echo "scanner did not fail on: $w"; exit 1; fi
+            echo "scanner failed as expected on: $w"
+          done

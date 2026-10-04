@@ -1,0 +1,52 @@
+{
+  "upload_type": "software",
+  "title": "Spark OES-512 BioSignal Explorer: an independent prototype for explainable 512-channel biosignal monitoring in the browser",
+  "version": "0.1.0",
+  "description": "<p><strong>Spark OES-512 BioSignal Explorer</strong> is a single self-contained HTML page (no CDN, no external fonts, no network requests, no backend, no AI API) by Spark AI NLP for interface and concept testing of explainable 512-channel monitoring.</p><p><strong>Score contract.</strong> A synthetic frame of 512 values is split into 16 blocks of 32. Each block is scored with S = 0.45·max|x| + 0.35·RMS + 0.20·mean|x| and alerts when S &ge; threshold (default 0.50, adjustable). Missing data (NaN) triggers human review and is never scored; non-finite or non-numeric values are rejected the same way. This is the same block score as in oes-resilience and oes512q-latch.</p><p><strong>Contents.</strong> 512-channel heatmap, per-block score bars, five seeded deterministic synthetic scenarios (Normal, Local anomaly, Drift, Global disturbance, Missing data), an explainability panel, a human-review warning state, JSON export, CSV import, a rule-based plain-English explainer, an in-page self-test, Node tests that execute the page's single score block, and a forbidden-terms scan in CI.</p><p><strong>Limits.</strong> Evidence: SYNTHETIC only. Independent research prototype. Not a medical device; not diagnostic; not for treatment, patient care or clinical decision-making; not clinically validated. Not affiliated with any external company, clinic, lab or medical organization.</p>",
+  "creators": [
+    {
+      "name": "Brisson, Jean-François",
+      "affiliation": "Spark AI NLP",
+      "orcid": "0009-0000-9778-5374"
+    }
+  ],
+  "access_right": "open",
+  "license": "agpl-3.0-only",
+  "language": "eng",
+  "keywords": [
+    "OES-512",
+    "explainable monitoring",
+    "biosignal",
+    "block score",
+    "human review",
+    "synthetic data",
+    "research prototype",
+    "HTML",
+    "JavaScript"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/sparkainlp-x/spark-oes512-demo",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.5281/zenodo.23071166",
+      "relation": "references",
+      "scheme": "doi",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "10.5281/zenodo.22998570",
+      "relation": "references",
+      "scheme": "doi",
+      "resource_type": "software"
+    }
+  ],
+  "communities": [
+    {
+      "identifier": "spark-ai-nlp"
+    }
+  ],
+  "notes": "Evidence status: SYNTHETIC. Not a medical device. Commercial licensing: see COMMERCIAL-LICENSE.md."
+}

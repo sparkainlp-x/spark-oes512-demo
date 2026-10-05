@@ -1,11 +1,12 @@
 # Spark OES-512 BioSignal Explorer
 
-An independent Spark AI NLP prototype for explainable 512-channel biosignal monitoring.
+Independent Spark AI NLP **research prototype** for explainable 512-channel monitoring in the browser. SYNTHETIC data only; not a medical device.
 
 [![CI](https://github.com/sparkainlp-x/spark-oes512-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/sparkainlp-x/spark-oes512-demo/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange.svg)](#safety-notice)
 [![Evidence: SYNTHETIC](https://img.shields.io/badge/evidence-SYNTHETIC-blue.svg)](#safety-notice)
+[![DOI: pending](https://img.shields.io/badge/DOI-pending-lightgrey.svg)](#citation)
 
 **Live demo:** https://sparkainlp-x.github.io/spark-oes512-demo/
 

@@ -11,6 +11,7 @@ repository-code: "https://github.com/sparkainlp-x/spark-oes512-demo"
 url: "https://sparkainlp-x.github.io/spark-oes512-demo/"
 license: AGPL-3.0-only
 version: "0.1.0"
+date-released: "2026-10-06"
 abstract: >-
   Single self-contained HTML page (no external resources, no backend, no AI
   API). A synthetic 512-channel frame is split into 16 blocks of 32; each

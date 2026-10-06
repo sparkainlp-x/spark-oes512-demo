@@ -2,7 +2,7 @@
 
 All notable changes to this project. Evidence tag: SYNTHETIC (everything here runs on generated data).
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-10-06
 
 ### Added
 - `spark-oes512-demo.html` (main file) and `index.html` (byte-identical copy for GitHub Pages): self-contained, dark-theme page with no external resources. 512-channel heatmap (16 blocks × 32 channels), per-block score bars, alert threshold slider (default 0.50) with a "Reset to 0.50" button, five seeded deterministic synthetic scenarios (Normal, Local anomaly, Drift, Global disturbance, Missing data), explainability panel, human-review warning state, JSON export, CSV import of 512 values, rule-based Spark avatar explainer, persistent safety banner and in-page self-test.

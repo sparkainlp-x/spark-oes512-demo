@@ -6,7 +6,7 @@ Independent Spark AI NLP **research prototype** for explainable 512-channel moni
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Status: research prototype](https://img.shields.io/badge/status-research%20prototype-orange.svg)](#safety-notice)
 [![Evidence: SYNTHETIC](https://img.shields.io/badge/evidence-SYNTHETIC-blue.svg)](#safety-notice)
-[![DOI: pending](https://img.shields.io/badge/DOI-pending-lightgrey.svg)](#citation)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23187282.svg)](https://doi.org/10.5281/zenodo.23187282)
 
 **Live demo:** https://sparkainlp-x.github.io/spark-oes512-demo/
 
@@ -101,9 +101,9 @@ python3 tests/forbidden_terms.py  # repository-wide forbidden-terms scan
 
 If you use this software, please cite it using [CITATION.cff](CITATION.cff):
 
-> Brisson, Jean-François. *Spark OES-512 BioSignal Explorer* (v0.1.0). Spark AI NLP. https://github.com/sparkainlp-x/spark-oes512-demo
+> Brisson, Jean-François. *Spark OES-512 BioSignal Explorer* (v0.1.0). Spark AI NLP. Zenodo. https://doi.org/10.5281/zenodo.23187283
 
-A Zenodo DOI will be added after the first archived release.
+Archived on Zenodo: concept DOI [10.5281/zenodo.23187282](https://doi.org/10.5281/zenodo.23187282) (all versions); v0.1.0: [10.5281/zenodo.23187283](https://doi.org/10.5281/zenodo.23187283).
 
 ## License
 
